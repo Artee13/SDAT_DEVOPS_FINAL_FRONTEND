@@ -1,10 +1,10 @@
-import { Layout, Typography, Tag, Space } from "antd";
+import { Layout, Typography, Tag, Space, Select, Tabs, Table } from "antd";
 import { useEffect, useState } from "react";
 import client from "./api/client";
-import { Select } from "antd";
 import { fetchAirports } from "./api/airports";
-import { Tabs, Table } from "antd";
 import { fetchFlights } from "./api/flights";
+import dayjs from "dayjs";
+
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -57,7 +57,13 @@ export default function App() {
     { title: "To", dataIndex: "destination", key: "destination" },
     { title: "Gate", dataIndex: "gateName", key: "gateName" },
     { title: "Status", dataIndex: "status", key: "status" },
-    { title: "Time", dataIndex: "scheduledTime", key: "scheduledTime" },
+    {
+      title: "Time",
+      dataIndex: "scheduledTime",
+      key: "scheduledTime",
+      render: (value) => (value ? dayjs(value).format("HH:mm") : "-"),
+    },
+
   ];
 
 
