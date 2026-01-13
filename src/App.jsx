@@ -1,35 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Layout, Typography, Tag, Space } from "antd";
+import { useEffect, useState } from "react";
+import client from "./api/client";
 
-function App() {
-  const [count, setCount] = useState(0)
+const { Header, Content } = Layout;
+const { Title, Text } = Typography;
+
+export default function App() {
+  const [backendStatus, setBackendStatus] = useState("loading");
+
+  useEffect(() => {
+    client
+      .get("/api/health")
+      .then((res) => {
+        setBackendStatus(res.data === "OK" ? "ok" : "unknown");
+      })
+      .catch(() => {
+        setBackendStatus("error");
+      });
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <Layout style={{ minHeight: "100vh" }}>
+      <Header style={{ display: "flex", alignItems: "center" }}>
+        <Title level={3} style={{ color: "white", margin: 0 }}>
+          Airport Arrivals & Departures
+        </Title>
+      </Header>
 
-export default App
+      <Content style={{ padding: 24 }}>
+        <Title level={4}>Frontend is running ✅</Title>
+
+        <Space>
+          <Text>Backend status:</Text>
+          {backendStatus === "loading" && <Tag color="blue">Loading...</Tag>}
+          {backendStatus === "ok" && <Tag color="green">OK</Tag>}
+          {backendStatus === "unknown" && <Tag color="orange">Unexpected</Tag>}
+          {backendStatus === "error" && <Tag color="red">ERROR</Tag>}
+        </Space>
+      </Content>
+    </Layout>
+  );
+}
