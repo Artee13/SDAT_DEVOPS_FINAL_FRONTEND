@@ -6,3 +6,12 @@ export async function fetchFlights(airportId, type) {
   });
   return res.data;
 }
+
+export async function createFlight(payload) {
+  const res = await client.post("/api/flights", payload);
+  return res.data;
+}
+
+export async function deleteFlight(id) {
+  await client.delete(`/api/flights/${id}`);
+}

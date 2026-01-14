@@ -1,10 +1,13 @@
 import { Layout, Typography, Tag, Space, Select, Tabs, Table } from "antd";
 import { useEffect, useState } from "react";
+import { Routes, Route, Link } from "react-router-dom";
+import dayjs from "dayjs";
+
 import client from "./api/client";
 import { fetchAirports } from "./api/airports";
 import { fetchFlights } from "./api/flights";
-import dayjs from "dayjs";
 
+import AdminFlights from "./pages/AdminFlights";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -16,7 +19,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("ARRIVAL");
   const [flights, setFlights] = useState([]);
   const [loadingFlights, setLoadingFlights] = useState(false);
-
 
   useEffect(() => {
     client
@@ -63,9 +65,58 @@ export default function App() {
       key: "scheduledTime",
       render: (value) => (value ? dayjs(value).format("HH:mm") : "-"),
     },
-
   ];
 
+  //  Home page 
+  const Home = (
+    <>
+      <Title level={4}>Dashboard</Title>
+
+      <Space>
+        <Text>Backend status:</Text>
+        {backendStatus === "loading" && <Tag color="blue">Loading...</Tag>}
+        {backendStatus === "ok" && <Tag color="green">OK</Tag>}
+        {backendStatus === "unknown" && <Tag color="orange">Unexpected</Tag>}
+        {backendStatus === "error" && <Tag color="red">ERROR</Tag>}
+      </Space>
+
+      <div style={{ marginTop: 16, maxWidth: 320 }}>
+        <div style={{ marginBottom: 8 }}>Select airport:</div>
+        <Select
+          style={{ width: "100%" }}
+          value={selectedAirportId}
+          onChange={setSelectedAirportId}
+          options={airports.map((a) => ({
+            label: `${a.code} - ${a.city}`,
+            value: a.id,
+          }))}
+        />
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            { key: "ARRIVAL", label: "Arrivals" },
+            { key: "DEPARTURE", label: "Departures" },
+          ]}
+        />
+
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={flights}
+          loading={loadingFlights}
+          pagination={false}
+        />
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <Link to="/admin/flights">Go to Admin Flights →</Link>
+      </div>
+    </>
+  );
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -76,47 +127,10 @@ export default function App() {
       </Header>
 
       <Content style={{ padding: 24 }}>
-        <Title level={4}>Frontend</Title>
-
-        <Space>
-          <Text>Backend status:</Text>
-          {backendStatus === "loading" && <Tag color="blue">Loading...</Tag>}
-          {backendStatus === "ok" && <Tag color="green">OK</Tag>}
-          {backendStatus === "unknown" && <Tag color="orange">Unexpected</Tag>}
-          {backendStatus === "error" && <Tag color="red">ERROR</Tag>}
-        </Space>
-        <div style={{ marginTop: 16, maxWidth: 320 }}>.
-          <div style={{ marginBottom: 8 }}>Select airport:</div>
-          <Select
-            style={{ width: "100%" }}
-            value={selectedAirportId}
-            onChange={setSelectedAirportId}
-            options={airports.map((a) => ({
-              label: `${a.code} - ${a.city}`,
-              value: a.id,
-            }))}
-          />
-        </div>
-        <div style={{ marginTop: 24 }}>
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={[
-              { key: "ARRIVAL", label: "Arrivals" },
-              { key: "DEPARTURE", label: "Departures" },
-            ]}
-          />
-
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={flights}
-            loading={loadingFlights}
-            pagination={false}
-          />
-        </div>
-
-
+        <Routes>
+          <Route path="/" element={Home} />
+          <Route path="/admin/flights" element={<AdminFlights />} />
+        </Routes>
       </Content>
     </Layout>
   );
