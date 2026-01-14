@@ -15,3 +15,9 @@ export async function createFlight(payload) {
 export async function deleteFlight(id) {
   await client.delete(`/api/flights/${id}`);
 }
+
+export async function updateFlight(id, payload) {
+  const res = await client.put(`/api/flights/${id}`, payload);
+  return res.data;
+}
+

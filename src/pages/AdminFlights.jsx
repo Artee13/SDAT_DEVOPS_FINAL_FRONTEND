@@ -9,9 +9,10 @@ import {
     Typography,
     message,
     Popconfirm,
+    Space,
 } from "antd";
 
-import { fetchFlights, createFlight, deleteFlight } from "../api/flights";
+import { fetchFlights, createFlight, deleteFlight, updateFlight } from "../api/flights";
 import { fetchAirports } from "../api/airports";
 import { fetchAirlines } from "../api/airlines";
 import { fetchGates } from "../api/gates";
@@ -28,6 +29,8 @@ export default function AdminFlights() {
 
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    const [editingFlight, setEditingFlight] = useState(null);
 
     const [form] = Form.useForm();
 
@@ -47,12 +50,57 @@ export default function AdminFlights() {
         loadFlights();
     }, []);
 
-    // load dropdown data once
     useEffect(() => {
         fetchAirports().then(setAirports).catch(() => setAirports([]));
         fetchAirlines().then(setAirlines).catch(() => setAirlines([]));
         fetchGates().then(setGates).catch(() => setGates([]));
     }, []);
+
+    async function onDelete(id) {
+        try {
+            await deleteFlight(id);
+            message.success("Flight deleted");
+            await loadFlights();
+        } catch {
+            message.error("Failed to delete flight");
+        }
+    }
+
+    // Create OR Update using the same modal
+    async function onSubmit(values) {
+        setSaving(true);
+        try {
+            const payload = {
+                flightNumber: values.flightNumber,
+                type: values.type,
+                status: values.status,
+                scheduledTime: values.scheduledTime,
+                estimatedTime: values.estimatedTime || null,
+                origin: values.origin,
+                destination: values.destination,
+                airportId: values.airportId,
+                airlineId: values.airlineId,
+                gateId: values.gateId,
+            };
+
+            if (editingFlight) {
+                await updateFlight(editingFlight.id, payload);
+                message.success("Flight updated");
+            } else {
+                await createFlight(payload);
+                message.success("Flight created");
+            }
+
+            setOpen(false);
+            setEditingFlight(null);
+            form.resetFields();
+            await loadFlights();
+        } catch {
+            message.error("Failed to save flight");
+        } finally {
+            setSaving(false);
+        }
+    }
 
     const columns = [
         { title: "ID", dataIndex: "id", key: "id", width: 70 },
@@ -67,87 +115,83 @@ export default function AdminFlights() {
             title: "Actions",
             key: "actions",
             render: (_, record) => (
-                <Popconfirm
-                    title="Delete this flight?"
-                    okText="Yes"
-                    cancelText="No"
-                    onConfirm={() => onDelete(record.id)}
-                >
-                    <Button danger size="small">Delete</Button>
-                </Popconfirm>
+                <Space>
+                    <Button
+                        size="small"
+                        onClick={() => {
+                            setEditingFlight(record);
+                            setOpen(true);
+
+                            // prefill modal fields
+                            form.setFieldsValue({
+                                flightNumber: record.flightNumber,
+                                type: record.type,
+                                status: record.status,
+                                scheduledTime: record.scheduledTime?.slice(0, 16),
+                                estimatedTime: record.estimatedTime ? record.estimatedTime.slice(0, 16) : "",
+                                origin: record.origin,
+                                destination: record.destination,
+                                airportId: record.airportId,
+                                airlineId: record.airlineId,
+                                gateId: record.gateId,
+                            });
+                        }}
+                    >
+                        Edit
+                    </Button>
+
+                    <Popconfirm
+                        title="Delete this flight?"
+                        okText="Yes"
+                        cancelText="No"
+                        onConfirm={() => onDelete(record.id)}
+                    >
+                        <Button danger size="small">
+                            Delete
+                        </Button>
+                    </Popconfirm>
+                </Space>
             ),
         },
-
     ];
-
-    async function onCreate(values) {
-        setSaving(true);
-        try {
-            // backend expects ISO format like "2026-01-11T18:30"
-            const payload = {
-                flightNumber: values.flightNumber,
-                type: values.type,
-                status: values.status,
-                scheduledTime: values.scheduledTime,
-                estimatedTime: values.estimatedTime || null,
-                origin: values.origin,
-                destination: values.destination,
-                airportId: values.airportId,
-                airlineId: values.airlineId,
-                gateId: values.gateId,
-            };
-
-            await createFlight(payload);
-            message.success("Flight created");
-            setOpen(false);
-            form.resetFields();
-            await loadFlights();
-        } catch (err) {
-            message.error("Failed to create flight");
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    async function onDelete(id) {
-        try {
-            await deleteFlight(id);
-            message.success("Flight deleted");
-            await loadFlights();
-        } catch {
-            message.error("Failed to delete flight");
-        }
-    }
-
 
     return (
         <div style={{ padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Title level={3} style={{ margin: 0 }}>Admin — Flights</Title>
-                <Button type="primary" onClick={() => setOpen(true)}>
+                <Title level={3} style={{ margin: 0 }}>
+                    Admin — Flights
+                </Title>
+
+                {/* HERE is where the New Flight button goes */}
+                <Button
+                    type="primary"
+                    onClick={() => {
+                        setEditingFlight(null);
+                        form.resetFields();
+                        setOpen(true);
+                    }}
+                >
                     New Flight
                 </Button>
             </div>
 
             <div style={{ marginTop: 16 }}>
-                <Table
-                    rowKey="id"
-                    columns={columns}
-                    dataSource={flights}
-                    loading={loading}
-                    pagination={false}
-                />
+                <Table rowKey="id" columns={columns} dataSource={flights} loading={loading} pagination={false} />
             </div>
 
             <Modal
-                title="Create Flight"
+                title={editingFlight ? "Edit Flight" : "Create Flight"}
                 open={open}
-                onCancel={() => setOpen(false)}
+                onCancel={() => {
+                    setOpen(false);
+                    setEditingFlight(null);
+                    form.resetFields();
+                }}
                 onOk={() => form.submit()}
                 confirmLoading={saving}
-                okText="Create"
+                okText={editingFlight ? "Save" : "Create"}
             >
-                <Form form={form} layout="vertical" onFinish={onCreate}>
+                <Form form={form} layout="vertical" onFinish={onSubmit}>
                     <Form.Item name="flightNumber" label="Flight Number" rules={[{ required: true }]}>
                         <Input placeholder="AC101" />
                     </Form.Item>
@@ -173,11 +217,7 @@ export default function AdminFlights() {
                         />
                     </Form.Item>
 
-                    <Form.Item
-                        name="scheduledTime"
-                        label="Scheduled Time (ISO)"
-                        rules={[{ required: true }]}
-                    >
+                    <Form.Item name="scheduledTime" label="Scheduled Time (ISO)" rules={[{ required: true }]}>
                         <Input placeholder="2026-01-11T18:30" />
                     </Form.Item>
 
